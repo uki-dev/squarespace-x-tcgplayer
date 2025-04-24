@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",                // Use ESNext module system
+    "target": "ESNext",                // Use ESNext as the JavaScript target
+    "moduleResolution": "node",        // Resolves modules using Node.js' module resolution
+    "esModuleInterop": true,           // For compatibility with CommonJS
+    "skipLibCheck": true,              // Skips type checking for declaration files
+    "strict": true                     // Enables strict type checking
+  }
+}
