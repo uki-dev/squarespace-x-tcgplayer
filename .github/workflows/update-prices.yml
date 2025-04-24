@@ -22,6 +22,8 @@ jobs:
         run: npm ci
 
       - name: 🔄 Run Update Script
+        env:
+          SQUARESPACE_API_KEY: ${{ secrets.SQUARESPACE_API_KEY }}
         run: |
           npm run update-prices
 
