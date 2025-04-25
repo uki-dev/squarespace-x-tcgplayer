@@ -2,6 +2,9 @@ import fetch from 'node-fetch';
 import puppeteer from 'puppeteer';
 import dotenv from 'dotenv';
 import fs from 'fs';
+
+import { Convert } from "easy-currencies";
+
 dotenv.config();
 
 const SQUARESPACE_API_KEY = process.env.SQUARESPACE_API_KEY!;
@@ -157,12 +160,20 @@ namespace TCGPlayer {
         return prices.length >= 2 && prices.every(el => (el.textContent || '').trim() !== '');
       });
 
-      const { normalPrice, foilPrice } = await page.evaluate(() => {
+      const { normalPriceUSD, foilPriceUSD } = await page.evaluate(() => {
         const prices = Array.from(document.querySelectorAll('.near-mint-table__price'));
-        const normalPrice = prices[0]?.textContent?.replace(/[^\d.-]/g, '') || null;
-        const foilPrice = prices[1]?.textContent?.replace(/[^\d.-]/g, '') || null;
-        return { normalPrice, foilPrice };
+        const normalPriceUSD = prices[0]?.textContent ? parseFloat(prices[0].textContent.replace(/[^\d.-]/g, '')) : null;
+        const foilPriceUSD = prices[1]?.textContent ? parseFloat(prices[1].textContent.replace(/[^\d.-]/g, '')) : null;
+        return { normalPriceUSD, foilPriceUSD };
       });
+
+      const normalPrice = normalPriceUSD
+        ? (await Convert(normalPriceUSD).from("USD").to("AUD")).toFixed(2)
+        : null;
+
+      const foilPrice = foilPriceUSD
+        ? (await Convert(foilPriceUSD).from("USD").to("AUD")).toFixed(2)
+        : null;
 
       return { normalPrice, foilPrice };
     } finally {
@@ -193,7 +204,6 @@ namespace TCGPlayer {
         console.group("🃏 Near Mint");
         const oldPrice = parseFloat(nearMintVariant.pricing.basePrice.value);
         const newPrice = parseFloat(prices.normalPrice);
-
         if (oldPrice !== newPrice) {
           await Squarespace.updateProductVariant(product.id, nearMintVariant.id, newPrice);
           console.log(`✅ Update in price from $${oldPrice} → $${newPrice}`);
@@ -204,10 +214,10 @@ namespace TCGPlayer {
       }
 
       const nearMintFoilVariant = product.variants?.find(v => v.attributes?.["Condition"] === "Near Mint Foil");
-      if (nearMintFoilVariant && prices.normalPrice) {
+      if (nearMintFoilVariant && prices.foilPrice) {
         console.group("🃏✨ Near Mint Foil");
         const oldPrice = parseFloat(nearMintFoilVariant.pricing.basePrice.value);
-        const newPrice = parseFloat(prices.normalPrice);
+        const newPrice = parseFloat(prices.foilPrice);
         if (oldPrice !== newPrice) {
           await Squarespace.updateProductVariant(product.id, nearMintFoilVariant.id, newPrice);
           console.log(`✅ Updated price from $${oldPrice} → $${newPrice}`);
