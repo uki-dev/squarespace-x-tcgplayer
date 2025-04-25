@@ -78,14 +78,28 @@ namespace Squarespace {
   const BASE_URL = 'https://api.squarespace.com/1.0/commerce/products';
 
   export async function getProducts(): Promise<Product[]> {
-    const res = await fetch(BASE_URL, {
-      headers: {
-        Authorization: `Bearer ${SQUARESPACE_API_KEY}`
-      }
-    });
+    let cursor = null;
+    let products: Product[] = [];
 
-    const data = await res.json() as ProductResponse;
-    return data.products;
+    do {
+      const url = new URL('https://api.squarespace.com/1.0/commerce/products');
+      if (cursor) {
+        url.searchParams.append('cursor', cursor);
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${SQUARESPACE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json() as ProductResponse;
+      products = products.concat(data.products);
+      cursor = data.pagination?.nextPageCursor;
+    } while (cursor);
+
+    return products;
   }
 
   export async function updateProductVariant(
