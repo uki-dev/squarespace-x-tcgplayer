@@ -145,11 +145,18 @@ namespace TCGPlayer {
       headless: true,
       args: [
         '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-blink-features=AutomationControlled',
       ]
     });
-    const page = await browser.newPage();
+
     try {
-      await page.goto(`https://www.tcgplayer.com/search/all/products?q=${encodeURIComponent(cardName)}`, { waitUntil: 'domcontentloaded' });
+      const page = await browser.newPage();
+      // Spoof user agent to get around TCGplayers anti-scrape mechanisms
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36');
+
+      await page.goto(`https://www.tcgplayer.com/search/all/products?q=${encodeURIComponent(cardName)}`, { waitUntil: 'networkidle2' });
 
       await page.waitForSelector('.product-card', { visible: true });
 
