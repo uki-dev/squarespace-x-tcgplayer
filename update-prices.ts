@@ -178,14 +178,23 @@ namespace TCGPlayer {
 
       await page.waitForFunction(() => {
         const prices = Array.from(document.querySelectorAll('.near-mint-table__price'));
-        return prices.length >= 2 && prices.every(el => (el.textContent || '').trim() !== '');
+        return prices.length > 0 && prices.every(el => (el.textContent || '').trim() !== '');
       });
 
       const { normalPriceUSD, foilPriceUSD } = await page.evaluate(() => {
-        const prices = Array.from(document.querySelectorAll('.near-mint-table__price'));
-        const normalPriceUSD = prices[0]?.textContent ? parseFloat(prices[0].textContent.replace(/[^\d.-]/g, '')) : null;
-        const foilPriceUSD = prices[1]?.textContent ? parseFloat(prices[1].textContent.replace(/[^\d.-]/g, '')) : null;
-        return { normalPriceUSD, foilPriceUSD };
+        const cells = Array.from(document.querySelectorAll('.near-mint-table tr td'));
+        let normal = null, foil = null;
+
+        for (let i = 0; i < cells.length; i += 2) {
+          const label = cells[i]?.textContent?.trim();
+          const priceText = cells[i + 1]?.querySelector('.near-mint-table__price')?.textContent;
+          const price = priceText ? parseFloat(priceText.replace(/[^\d.-]/g, '')) : null;
+
+          if (label === 'Normal:') normal = price;
+          if (label === 'Foil:') foil = price;
+        }
+
+        return { normalPriceUSD: normal, foilPriceUSD: foil };
       });
 
       const normalPrice = normalPriceUSD
@@ -213,7 +222,7 @@ namespace TCGPlayer {
       console.group(`🔄 (${index + 1}/${products.length}) ${product.name}`);
 
       const prices = await TCGPlayer.scrapeCardPrices(product.name);
-      if (!prices) {
+      if (!prices || (!prices.normalPrice && !prices.foilPrice)) {
         console.warn(`⚠️ No prices found for ${product.name}`);
         console.groupEnd();
         continue;
